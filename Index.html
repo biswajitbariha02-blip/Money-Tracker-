@@ -1,0 +1,249 @@
+New update:-<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Smart Money Tracker</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<style>
+body{font-family:Arial;background:#f4f6f8;margin:0}
+header{background:#1e88e5;color:#fff;padding:15px;text-align:center}
+nav{display:flex;background:#fff;box-shadow:0 2px 5px rgba(0,0,0,.1)}
+nav button{flex:1;padding:12px;border:none;background:#eee;font-weight:bold;cursor:pointer;outline:none;}
+nav button.active{background:#1e88e5;color:#fff;}
+.container{padding:15px}
+.card{background:#fff;padding:15px;margin-bottom:15px;border-radius:8px;box-shadow:0 2px 6px rgba(0,0,0,.1)}
+.summary{display:flex;gap:10px}
+.summary div{flex:1;background:#e3f2fd;padding:10px;border-radius:6px;text-align:center}
+input,select,button{width:100%;padding:10px;margin-top:8px;box-sizing:border-box;}
+button{background:#1e88e5;color:white;border:none;cursor:pointer;}
+.hidden{display:none}
+.history-item{display:flex;justify-content:space-between;align-items:center;font-size:14px;border-bottom:1px solid #ddd;padding:8px 0}
+
+/* calculator */
+.calc{display:grid;grid-template-columns:repeat(4,1fr);gap:5px}
+.calc input{grid-column:span 4;text-align:right;font-size:20px}
+.calc button{padding:12px}
+</style>
+</head>
+
+<body>
+
+<header>
+<h2>💰 Smart Money Tracker</h2>
+<p>Income • Expense • EMI</p>
+</header>
+
+<nav>
+<button onclick="showTab('dashboard', this)" class="active">Dashboard</button>
+<button onclick="showTab('add', this)">Add</button>
+<button onclick="showTab('history', this)">History</button>
+<button onclick="showTab('calc', this)">Calc</button>
+</nav>
+
+<div class="container">
+
+<!-- DASHBOARD -->
+<div id="dashboard">
+<div class="card">
+<h3>📊 Overview</h3>
+<div class="summary">
+<div><b>💰 Income</b><p id="totalIncome">0</p></div>
+<div><b>💸 Expense</b><p id="totalExpense">0</p></div>
+</div>
+<p><b>🧾 Balance:</b> <span id="balance">0</span></p>
+<p><b>🏦 EMI Liability:</b> <span id="emiTotal">0</span></p>
+</div>
+</div>
+
+<!-- ADD -->
+<div id="add" class="hidden">
+
+<div class="card">
+<h3>➕ Add Income</h3>
+<input type="number" id="incomeAmount" placeholder="Enter Amount">
+<select id="incomeSource">
+<option>💼 Salary</option>
+<option>🛒 Business</option>
+<option>💻 Freelancing</option>
+<option>🌐 Online</option>
+<option>🎁 Other</option>
+</select>
+<button onclick="addIncome()">Add Income</button>
+</div>
+
+<div class="card">
+<h3>➖ Add Expense</h3>
+<input type="number" id="expenseAmount" placeholder="Enter Amount">
+<select id="expenseCategory">
+<option>🍔 Food</option>
+<option>🏠 Rent</option>
+<option>💡 Electricity</option>
+<option>🌐 Internet</option>
+<option>🛍️ Shopping</option>
+<option>✈️ Travel</option>
+<option>💊 Medical</option>
+<option>📚 Education</option>
+<option>🎮 Entertainment</option>
+<option>📦 Other</option>
+</select>
+<button onclick="addExpense()">Add Expense</button>
+</div>
+
+<div class="card">
+<h3>🏦 EMI</h3>
+<input type="number" id="emiAmount" placeholder="Monthly EMI">
+<input type="number" id="emiMonths" placeholder="Months">
+<button onclick="addEMI()">Add EMI</button>
+</div>
+
+</div>
+
+<!-- HISTORY -->
+<div id="history" class="hidden">
+<div class="card">
+<h3>📜 Transaction History</h3>
+
+<!-- NEW DELETE BUTTON -->
+<button onclick="clearHistory()" style="background:#e53935;margin-bottom:10px;">
+🗑️ Delete All History
+</button>
+
+<div id="historyList"></div>
+</div>
+</div>
+
+<!-- CALCULATOR -->
+<div id="calc" class="hidden">
+<div class="card">
+<h3>🧮 Calculator</h3>
+<div class="calc">
+<input id="calcDisplay" readonly>
+
+<button onclick="press('7')">7</button>
+<button onclick="press('8')">8</button>
+<button onclick="press('9')">9</button>
+<button onclick="press('/')">÷</button>
+
+<button onclick="press('4')">4</button>
+<button onclick="press('5')">5</button>
+<button onclick="press('6')">6</button>
+<button onclick="press('*')">×</button>
+
+<button onclick="press('1')">1</button>
+<button onclick="press('2')">2</button>
+<button onclick="press('3')">3</button>
+<button onclick="press('-')">-</button>
+
+<button onclick="press('0')">0</button>
+<button onclick="press('.')">.</button>
+<button onclick="calculate()">=</button>
+<button onclick="press('+')">+</button>
+
+<button onclick="clearCalc()" style="grid-column:span 4;background:#e53935">Clear</button>
+</div>
+</div>
+</div>
+
+</div>
+
+<script>
+let income=[],expense=[],emi=[];
+let currency="₹";
+
+/* STORAGE */
+function saveData(){
+localStorage.setItem("moneyTrackerData", JSON.stringify({income,expense,emi}));
+}
+
+function loadData(){
+try{
+let data=JSON.parse(localStorage.getItem("moneyTrackerData"));
+if(data){
+income=Array.isArray(data.income)?data.income:[];
+expense=Array.isArray(data.expense)?data.expense:[];
+emi=Array.isArray(data.emi)?data.emi:[];
+}
+}catch{
+income=[];expense=[];emi=[];
+saveData();
+}
+}
+
+/* ADD FUNCTIONS */
+function addIncome(){
+if(!incomeAmount.value){alert("Enter amount");return;}
+income.push(+incomeAmount.value);
+incomeAmount.value="";
+saveData();
+update();
+}
+
+function addExpense(){
+if(!expenseAmount.value){alert("Enter amount");return;}
+expense.push(+expenseAmount.value);
+expenseAmount.value="";
+saveData();
+update();
+}
+
+function addEMI(){
+if(!emiAmount.value||!emiMonths.value){alert("Enter EMI details");return;}
+emi.push({amt:+emiAmount.value,months:+emiMonths.value});
+emiAmount.value="";emiMonths.value="";
+saveData();
+update();
+}
+
+/* DELETE HISTORY */
+function clearHistory(){
+if(!confirm("Delete all history?")) return;
+income=[];expense=[];emi=[];
+saveData();
+update();
+}
+
+/* UPDATE UI */
+function update(){
+let ti=income.reduce((a,b)=>a+b,0);
+let te=expense.reduce((a,b)=>a+b,0);
+let et=emi.reduce((a,b)=>a+(b.amt*b.months),0);
+
+totalIncome.innerText=currency+ti;
+totalExpense.innerText=currency+te;
+balance.innerText=currency+(ti-te);
+emiTotal.innerText=currency+et;
+
+renderHistory();
+}
+
+function renderHistory(){
+let html="";
+income.forEach(i=>html+=`<div class="history-item">💰 ${currency}${i}</div>`);
+expense.forEach(e=>html+=`<div class="history-item">💸 ${currency}${e}</div>`);
+emi.forEach(e=>html+=`<div class="history-item">🏦 EMI ${currency}${e.amt} × ${e.months}</div>`);
+historyList.innerHTML=html||"No records";
+}
+
+function showTab(tab,btn){
+["dashboard","add","history","calc"].forEach(t=>document.getElementById(t).classList.add("hidden"));
+document.getElementById(tab).classList.remove("hidden");
+document.querySelectorAll("nav button").forEach(b=>b.classList.remove("active"));
+btn.classList.add("active");
+}
+
+/* calculator */
+function press(v){calcDisplay.value+=v;}
+function calculate(){
+try{calcDisplay.value=eval(calcDisplay.value);}
+catch{calcDisplay.value="Error";}
+}
+function clearCalc(){calcDisplay.value="";}
+
+/* INIT */
+loadData();
+update();
+</script>
+
+</body>
+</html>
